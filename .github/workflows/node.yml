@@ -1,4 +1,4 @@
-name: node
+name: Node.js CI
 
 on:
   push:
@@ -31,10 +31,17 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Start Server
-        run: npm run start
+      - name: Start App in Background
+        # `&` runs app in background
+        run: npm run start &
+
+      - name: Wait for App
+        # Add a wait time to ensure app is up (use case: temporarily for testing)
+        # Without the wait `sleep`, any subsequent steps that might depend on the app could fail
+        # because they try to access the app before it's ready
+        run: sleep 10
 
       - name: Conditional Step
         run: echo "This step only runs on the main branch"
-        # github is Context object. ref is reference to branch or tag that triggered workflow run
+        # `github` is Context object. `ref` is reference to branch or tag that triggered workflow run
         if: github.ref == 'refs/heads/main'

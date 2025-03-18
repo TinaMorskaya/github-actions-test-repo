@@ -1,7 +1,7 @@
 # After this workflow runs, you can view the results in the GitHub UI
 # 1. Navigate to your GitHub repository.
 # 2. Click on the "Security" tab near the top of the page.
-# 3. Go to the "Code scanning alerts" section to review all CodeQL alerts and recommendations
+# 3. Go to the "Code scanning" section to review all CodeQL alerts and recommendations
 name: "CodeQL app scan"
 
 on:

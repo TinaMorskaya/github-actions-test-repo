@@ -26,9 +26,12 @@ jobs:
 
     steps:
       - name: Checkout Repository
+        # To make sure that the runner is on the correct branch in the repository
+        # 3and have access to dependency file
         uses: actions/checkout@v2
 
       - name: Install Dependencies
+        # Use run to execute any script
         run: npm install
 
       - name: Start App in Background

@@ -24,10 +24,13 @@ jobs:
       - name: Package Next.js App
         # The vertical bar (|) is a YAML "literal block scalar" that allows you to write multi-line commands.
         # It preserves line breaks in the commands that follow.
-        # -r flag tells the zip command to work recursively, so it includes all subdirectories and their contents.
-        # -x flag excludes unnecessary files
+        # zip -> Use the zip utility
+        # -r -> Recursively include subdirectories all subdirectories and their contents
+        # nextjs-package.zip -> Name of the output zip file
+        # . -> Include all files from the current directory (this was missing in your command)
+        # -x -> Exclude excludes unnecessary files by patterns
         run: |
-          zip -r nextjs-package.zip -x "node_modules/*" ".git/*" ".idea/*"
+          zip -r nextjs-package.zip . -x "node_modules/*" ".git/*" ".idea/*"
 
       # Upload Actions Artifacts from your workflow run details in GitHub UI.
       - name: Upload Artifact

@@ -1,0 +1,32 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          tag_name: ${{ github.ref }}
+          name: Release $ {{ github.ref }}
+          prerelease: false
+          append_body: |
+            ## Instructions
+            - Step 1: ...
+            - Step 2: ...
+            
+            ## Notes:
+            - Note 1: ...
+            - Note 2: ...
+
+
+        

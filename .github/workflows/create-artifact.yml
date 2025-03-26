@@ -9,11 +9,17 @@ on:
 
 jobs:
   build-and-package:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Get Version
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Install Dependencies
         run: npm install
@@ -26,15 +32,15 @@ jobs:
         # It preserves line breaks in the commands that follow.
         # zip -> Use the zip utility
         # -r -> Recursively include subdirectories all subdirectories and their contents
-        # nextjs-package.zip -> Name of the output zip file
+        # nextjs-package-v${{ steps.package-version.outputs.version }}.zip -> Name of the output zip file with id
         # . -> Include all files from the current directory (this was missing in your command)
         # -x -> Exclude excludes unnecessary files by patterns
         run: |
-          zip -r nextjs-package.zip . -x "node_modules/*" ".git/*" ".idea/*"
+          zip -r nextjs-package-v${{ steps.package-version.outputs.version }}.zip . -x "node_modules/*" ".git/*" ".idea/*"
 
       # Upload Actions Artifacts from your workflow run details in GitHub UI.
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nextjs-package-app-artifact
-          path: nextjs-package.zip
+          name: nextjs-package-v${{ steps.package-version.outputs.version }}
+          path: nextjs-package-v${{ steps.package-version.outputs.version }}.zip

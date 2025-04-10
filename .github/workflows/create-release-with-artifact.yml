@@ -45,6 +45,9 @@ jobs:
     outputs:
       version: ${{ steps.package-version.outputs.version }}
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Get Version
         id: package-version
         run: |

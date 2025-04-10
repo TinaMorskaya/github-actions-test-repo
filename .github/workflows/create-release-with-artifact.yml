@@ -60,7 +60,8 @@ jobs:
       - name: Check If Tag Version Matches Package Version
         id: version-check
         run: |
-          TAG_VERSION="${{ github.ref_name }#v}"
+          TAG_VERSION="${{ github.ref_name }}"   # First get the GitHub variable
+          TAG_VERSION="${TAG_VERSION#v}"         # Then manipulate it with Bash
           PACKAGE_VERSION="${{ steps.package-version.outputs.version }}"
           if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
             echo "Error: Tag version ($TAG_VERSION) doesn't match package.json ($PACKAGE_VERSION)"

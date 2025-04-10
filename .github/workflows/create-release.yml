@@ -3,7 +3,7 @@ name: Create Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - '^v\d+\.\d+\.\d+$'
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
         with:
           generate_release_notes: true
           tag_name: ${{ github.ref }}
-          name: Release $ {{ github.ref }}
+          name: Release ${{ github.ref }}
           prerelease: false
           append_body: |
             ## Instructions

@@ -1,0 +1,79 @@
+# That workflow:
+#   run "test" on each push;
+#   run "check-ref-tag" if the trigger was tag, started with "v"
+#   run "generate-artifact" if jobs "test" and "check-ref-tag" were successful and if tag is semver (release tag)
+#   run "release" if "generate-artifact" was successful with file from "generate-artifact"
+
+name: Create release with artifact
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm run test
+
+
+  check-ref-tag:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    outputs:
+      is_valid_semver_tag: ${{ steps.check-tag.outputs.is_valid_semver_tag }}
+    steps:
+      - name: Check semver tag
+        id: check-tag
+        run: |
+          IS_VALID_SEMVER_TAG=$(${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]])
+          echo "is_valid_semver_tag=$IS_VALID_SEMVER_TAG" >> $GITHUB_OUTPUT
+
+  generate-artifact:
+    needs: [ test, check-ref-tag ]
+    if: needs.check-ref-tag.outputs.is_valid_semver_tag == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.package-version.outputs.version }}
+    steps:
+      - name: Get Version
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Package Next.js App
+        run: |
+          zip -r nextjs-package-v${{ steps.package-version.outputs.version }}.zip . -x "node_modules/*" ".git/*" ".idea/*"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-package-v${{ steps.package-version.outputs.version }}
+          path: nextjs-package-v${{ steps.package-version.outputs.version }}.zip
+
+  release:
+    needs: generate-artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-package-v${{ needs.generate-artifact.outputs.version }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          tag_name: ${{ github.ref }}
+          name: Release ${{ needs.generate-artifact.outputs.version }}
+          files:
+            nextjs-package-v${{ needs.generate-artifact.outputs.version }}

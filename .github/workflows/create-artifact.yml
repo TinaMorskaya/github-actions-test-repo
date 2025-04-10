@@ -17,6 +17,11 @@ jobs:
 
       - name: Get Version
         id: package-version
+        # Uses Node.js to run a quick JavaScript command to load the package.json file and extract the version from it
+        # Assigns that value to a shell variable called VERSION
+        # Takes the VERSION value and creates an output variable named "version"
+        # Writes it to the special GITHUB_OUTPUT file, which is GitHub Actions' way of setting outputs
+        # The >> means "append to" instead of overwriting the file
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT

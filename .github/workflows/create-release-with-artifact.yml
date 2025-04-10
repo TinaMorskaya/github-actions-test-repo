@@ -24,21 +24,23 @@ jobs:
         run: npm run test
 
 
-  check-ref-tag:
+  semver-tag-validation:
     runs-on: ubuntu-latest
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     outputs:
-      is_valid_semver_tag: ${{ steps.check-tag.outputs.is_valid_semver_tag }}
+      is_valid_semver_tag: ${{ steps.semver-check.outputs.is_valid_semver_tag }}
     steps:
-      - name: Check semver tag
-        id: check-tag
+      - name: Check if tag follows semantic versioning
+        id: semver-check
         run: |
-          IS_VALID_SEMVER_TAG=$(${{ github.ref_name }} =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]])
-          echo "is_valid_semver_tag=$IS_VALID_SEMVER_TAG" >> $GITHUB_OUTPUT
+          [[ "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] && \
+            IS_VALID_SEMVER_TAG="true" || \
+            IS_VALID_SEMVER_TAG="false"
+            echo "is_valid_semver_tag=$IS_VALID_SEMVER_TAG" >> $GITHUB_OUTPUT
 
   generate-artifact:
-    needs: [ test, check-ref-tag ]
-    if: needs.check-ref-tag.outputs.is_valid_semver_tag == 'true'
+    needs: [ test, semver-tag-validation ]
+    if: needs.semver-tag-validation.outputs.is_valid_semver_tag == 'true'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.package-version.outputs.version }}

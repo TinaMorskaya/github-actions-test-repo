@@ -76,7 +76,10 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
+          # "name" parameter = just a label or identifier for the artifact in GitHub's artifact storage system.
+          # It doesn't need to match the actual filename.
           name: nextjs-package-v${{ steps.package-version.outputs.version }}
+          # "path" = the real filename
           path: nextjs-package-v${{ steps.package-version.outputs.version }}.zip
 
   release:
@@ -96,4 +99,4 @@ jobs:
           tag_name: ${{ github.ref }}
           name: Release ${{ needs.generate-artifact.outputs.version }}
           files:
-            nextjs-package-v${{ needs.generate-artifact.outputs.version }}
+            nextjs-package-v${{ needs.generate-artifact.outputs.version }}.zip

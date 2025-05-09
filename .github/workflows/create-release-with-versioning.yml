@@ -1,0 +1,116 @@
+# That workflow:
+#   run "test" on each push;
+#   run "semver-tag-validation" if the trigger was tag, started with "v";
+#   run "update-version" if jobs "test" and "semver-tag-validation" were successful,
+#     & uses "version" variable from "semver-tag-validation";
+#   run "generate-artifact" if jobs "semver-tag-validation" and "update-version" were successful;
+#   run "release" if jobs "semver-tag-validation", "update-version" and "generate-artifact" was successful
+#     with a file from "generate-artifact";
+
+name: Create release with updated package.json version and artifact
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm run test
+
+
+  semver-tag-validation:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    outputs:
+      tag_version: ${{ steps.semver-check.outputs.tag_version }}
+    steps:
+      - name: Check If Tag Follows Semantic Versioning
+        id: semver-check
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"  # First get the GitHub variable
+          if [[ "$TAG_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_VERSION="${TAG_VERSION#v}"      # Then manipulate it with Bash, deleting "v"
+            echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Error: Tag version ($TAG_VERSION) doesn't look correct"
+            exit 1
+          fi
+
+  update-version:
+    needs: [ test, semver-tag-validation ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        # GitHub officially recognizes this email as the GitHub Actions bot identity.
+        # Plus, commits are displayed in the GitHub UI with a special "bot" label and marks as "Verified".
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update Version
+        # "--no-git-tag-version" means do not create a new tag for it (default behavior)
+        run: |
+          npm version ${{ needs.semver-tag-validation.outputs.tag_version }} --no-git-tag-version
+
+      - name: Commit and push changes
+        # "[skip ci]" tells GitHub Actions to not trigger a new workflow run when this commit is pushed.
+        #  This is important to prevent an infinite loop of workflow runs.
+        run: |
+          git add package.json
+          git commit -m "chore: update package.json version to ${{ needs.semver-tag-validation.outputs.tag_version }} [skip ci]"
+          git push origin main
+
+  generate-artifact:
+    needs: [ semver-tag-validation, update-version ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Package Next.js App
+        run: |
+          zip -r nextjs-package-v${{ needs.semver-tag-validation.outputs.tag_version }}.zip . -x "node_modules/*" ".git/*" ".idea/*"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # "name" parameter = just a label or identifier for the artifact in GitHub's artifact storage system.
+          # It doesn't need to match the actual filename.
+          name: nextjs-package-v${{ needs.semver-tag-validation.outputs.tag_version }}
+          # "path" = the real filename
+          path: nextjs-package-v${{ needs.semver-tag-validation.outputs.tag_version }}.zip
+
+  release:
+    needs: [ semver-tag-validation, update-version, generate-artifact ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nextjs-package-v${{ needs.semver-tag-validation.outputs.tag_version }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          tag_name: ${{ github.ref }}
+          name: Release ${{ needs.semver-tag-validation.outputs.tag_version }}
+          files:
+            nextjs-package-v${{needs.semver-tag-validation.outputs.tag_version }}.zip
